@@ -26,8 +26,9 @@ jobs:
       - name: Test frontend
         run: curl -f http://localhost:3000
 
-      - name: Test API via frontend network
-        run: docker compose exec -T api curl -f http://localhost:8000/docs
+      - name: Test API via docker network
+        run: |
+          docker compose exec -T frontend wget -qO- http://api:8000/docs > /dev/null
 
       - name: Stop services
         run: docker compose down
