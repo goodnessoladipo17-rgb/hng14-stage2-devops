@@ -1,27 +1,32 @@
-# HNG Stage 2 - DevOps
+import pytest
+from fastapi.testclient import TestClient
+from unittest.mock import MagicMock, patch
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-A multi-service job processing application with CI/CD pipeline.
+with patch('redis.Redis') as mock_redis:
+    mock_r = MagicMock()
+    mock_redis.return_value = mock_r
+    from main import app
 
-## Services
-- **API** - FastAPI backend (port 8000)
-- **Worker** - Background job processor
-- **Frontend** - Node.js frontend (port 3000)
-- **Redis** - Message queue
+client = TestClient(app)
 
-## Prerequisites
-- Docker Desktop
-- Docker Compose
+def test_create_job():
+    mock_r.hset.return_value = True
+    mock_r.lpush.return_value = True
+    response = client.post("/jobs")
+    assert response.status_code == 200
+    assert "job_id" in response.json()
 
-## Run Locally
-git clone https://github.com/goodnessoladipo17-rgb/hng14-stage2-devops
-cd hng14-stage2-devops
-docker compose up
+def test_get_job_found():
+    mock_r.hget.return_value = b"queued"
+    response = client.get("/jobs/test-123")
+    assert response.status_code == 200
+    assert response.json()["status"] == "queued"
 
-Then open http://localhost:3000
-
-## CI/CD
-GitHub Actions pipeline runs on every push to main:
-- Builds all Docker images
-- Starts all services
-- Tests frontend and API endpoints
-- Stops services
+def test_get_job_not_found():
+    mock_r.hget.return_value = None
+    response = client.get("/jobs/nonexistent")
+    assert response.status_code == 200
+    assert "error" in response.json()

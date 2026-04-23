@@ -1,18 +1,16 @@
-FROM python:3.11-slim AS builder
+FROM node:18-slim AS builder
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+COPY package.json .
+RUN npm install --omit=dev
 
-FROM python:3.11-slim
+FROM node:18-slim AS runner
 WORKDIR /app
-RUN useradd -m appuser
-COPY --from=builder /root/.local /home/appuser/.local
-COPY main.py .
+RUN useradd --create-home --shell /bin/bash appuser
+COPY --from=builder /app/node_modules ./node_modules
+COPY . .
 USER appuser
-ENV PATH=/home/appuser/.local/bin:$PATH
-ENV REDIS_HOST=redis
-ENV REDIS_PORT=6379
-EXPOSE 8000
+ENV PORT=3000
+EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')" || exit 1
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    CMD node -e "require('http').get('http://localhost:3000', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
+CMD ["node", "app.js"]

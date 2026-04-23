@@ -3,11 +3,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
-FROM python:3.11-slim
+FROM python:3.11-slim AS runner
 WORKDIR /app
-RUN useradd -m appuser
+RUN useradd --create-home --shell /bin/bash appuser
 COPY --from=builder /root/.local /home/appuser/.local
-COPY worker.py .
+COPY . .
 USER appuser
 ENV PATH=/home/appuser/.local/bin:$PATH
 ENV REDIS_HOST=redis
