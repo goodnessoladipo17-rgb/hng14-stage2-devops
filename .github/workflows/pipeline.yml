@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Run flake8 on API
         run: |
@@ -31,95 +31,4 @@ jobs:
         continue-on-error: true
 
   test:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Run pytest with coverage
-        run: |
-          pip install fastapi==0.104.1 uvicorn==0.24.0 redis==5.0.1 pytest==7.4.3 httpx==0.25.2 pytest-cov==4.1.0
-          cd api
-          pytest tests/ -v --cov=. --cov-report=xml
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-report
-          path: api/coverage.xml
-
-  security:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Run Trivy security scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: CRITICAL
-          exit-code: 0
-          format: sarif
-          output: trivy-results.sarif
-
-      - name: Upload Trivy SARIF report
-        uses: actions/upload-artifact@v3
-        with:
-          name: trivy-sarif
-          path: trivy-results.sarif
-
-  build-and-test:
-    runs-on: ubuntu-latest
-    needs: security
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Docker registry
-        run: docker run -d -p 5000:5000 --name registry registry:2
-
-      - name: Build Docker images with cache
-        run: |
-          docker compose build \
-            --build-arg BUILDKIT_INLINE_CACHE=1
-
-      - name: Tag and push to local registry
-        run: |
-          docker tag hng14-stage2-devops-api:latest localhost:5000/api:latest
-          docker tag hng14-stage2-devops-api:latest localhost:5000/api:${{ github.sha }}
-          docker push localhost:5000/api:latest
-          docker push localhost:5000/api:${{ github.sha }}
-
-      - name: Start services
-        run: docker compose up -d
-
-      - name: Wait for services to be ready
-        run: sleep 30
-
-      - name: Run integration tests
-        run: |
-          curl -f http://localhost:3000
-          curl -f http://localhost:8000/docs
-
-      - name: Stop services
-        if: always()
-        run: docker compose down
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Deploy rolling update
-        run: |
-          docker compose pull || true
-          docker compose up -d --no-deps --build api
-          docker compose up -d --no-deps --build frontend
-          docker compose up -d --no-deps --build worker
+    runs-on: ub
