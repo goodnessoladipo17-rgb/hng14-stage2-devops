@@ -106,3 +106,5 @@ jobs:
           docker compose up -d --no-deps --build api
           docker compose up -d --no-deps --build frontend
           docker compose up -d --no-deps --build worker
+
+
